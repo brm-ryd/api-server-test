@@ -27,7 +27,89 @@
             <p class="text-center text-gray-500 text-xs"><a class="underline" href="https://github.com/brm-ryd/api-server-test">Up & Running API Server</a></p>
         </div>
     </div>
-	<!-- incomplete js script below -->
+
+
+<!-- js script below -->
+<script>
+;(() => {
+    document.getElementById('auth-form').addEventListener('submit', (event) => {
+        // Prevent the page to be refreshed
+        event.preventDefault()
+
+        // Reset the error
+        FormError(null)
+        
+        // Get the username and password
+        const username = document.getElementById('auth-username').value
+        const password = document.getElementById('auth-password').value
+        if (!username || !password) {
+            FormError('Empty username and/or password')
+            return false
+        }
+
+        // Get the client_id, redirect_uri, and nonce from the querystring
+        const qs = new URLSearchParams(window.location.search)
+        if (!qs || !qs.has('client_id')) {
+            FormError('Empty client_id value in the querystring')
+            return false
+        }
+        const redirectUri = qs.has('redirect_uri') && qs.get('redirect_uri')
+        if (!redirectUri) {
+            FormError('Empty redirect_uri value in the querystring')
+            return false
+        }
+        const nonce = qs.has('nonce') && qs.get('nonce')
+        if (!nonce) {
+            FormError('Empty nonce value in the querystring')
+            return false
+        }
+        
+        // Parameters for the request's body
+        const reqBody = {
+            username,
+            password,
+            client_id: qs.get('client_id'),
+            nonce
+        }
+        Promise.resolve()
+            // Submit the request
+            .then(() => fetch('/authorize/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(reqBody)
+                })
+            )
+            // Parse the response body's JSON
+            .then((resp) => resp.json())
+            // Redirect to the redirect_uri and append the id_token
+            .then((data) => {
+                if (!data || !data.id_token) {
+                    throw (data && data.error) || 'Request error'
+                }
+                
+                window.location.assign(redirectUri + '#id_token=' + data.id_token)
+            })
+            // In case of errors…
+            .catch((err) => FormError(err))
+
+        return false
+    })
+})()
+
+function FormError(err) {
+    const el = document.getElementById('auth-form-error')
+    if (err) {
+        el.style.display = 'block'
+        el.innerText = err
+    }
+    else {
+        el.style.display = 'none'
+    }
+}
+</script>
+
 </body>
 
 </html>
