@@ -1,5 +1,5 @@
 # Builder image
-# incomplete
+# (still) incomplete
 
 FROM golang:1.14-buster as builder
 
@@ -13,11 +13,13 @@ RUN curl -L "https://github.com/gobuffalo/packr/releases/download/v${PACKR_VERSI
     && chmod +x /bin/packr2
 
 # Copy the app
-#
+WORKDIR /go/src/api-server
+ADD . /go/src/api-server
 
 # Build the app
 # RUN go get -d -v ./... \
 #    && /bin/packr2 \
+#    && go build -o /go/bin/api-server
 
 
 # Runtime image
