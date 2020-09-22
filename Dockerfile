@@ -17,9 +17,9 @@ WORKDIR /go/src/api-server
 ADD . /go/src/api-server
 
 # Build the app
-# RUN go get -d -v ./... \
-#    && /bin/packr2 \
-#    && go build -o /go/bin/api-server
+RUN go get -d -v ./... \
+    && /bin/packr2 \
+    && go build -o /go/bin/api-server
 
 
 # Runtime image
