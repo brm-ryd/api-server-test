@@ -92,3 +92,35 @@ func (f *Local) Get(name string, out io.Writer) (found bool, tag interface{}, er
 
 	return
 }
+
+func (f *Local) Set(name string, in io.Reader, tag interface{}) (tagOut interface{}, err error) {
+	// Create folders if necessary
+	dir := path.Dir(name)
+	if dir != "" {
+		err = os.MkdirAll(f.basePath+dir, os.ModePerm)
+		if err != nil {
+			return
+		}
+	}
+
+	// Create file
+	file, err := os.Create(f.basePath + name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	// Write stream to file
+	_, err = io.Copy(file, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (f *Local) Delete(name string, tag interface{}) (err error) {
+	// Delete the file
+	err = os.Remove(f.basePath + name)
+	return
+}
