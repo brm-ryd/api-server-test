@@ -8,10 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"runtime"
+	// "runtime"
 	"strings"
 
 	"github.com/brm-ryd/api-server-test/utils"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // local file system
@@ -27,7 +28,7 @@ func (f *Local) Init(connection string) error {
 
 	path := connection[strings.Index(connection, ":")+1:]
 
-	path, err := os.UserHomeDir(path)
+	path, err := homedir.Expand(path)
 	if err != nil {
 		return err
 	}
@@ -52,4 +53,42 @@ func (f *Local) Init(connection string) error {
 	f.basePath = path
 
 	return nil
+}
+
+func (f *Local) Get(name string, out io.Writer) (found bool, tag interface{}, err error) {
+	if name == "" {
+		err = errors.New("empty name")
+		return
+	}
+
+	found = true
+
+	// Opening file
+	file, err := os.Open(f.basePath + name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			found = false
+			err = nil
+		}
+		return
+	}
+	defer file.Close()
+
+	// Check file content
+	stat, err := file.Stat()
+	if err != nil {
+		return
+	}
+	if stat.Size() == 0 {
+		found = false
+		return
+	}
+
+	// Copy file to stream
+	_, err = io.Copy(out, file)
+	if err != nil {
+		return
+	}
+
+	return
 }
