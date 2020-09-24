@@ -30,6 +30,15 @@ func Get(connection string) (store Store, err error) {
 // interface
 type Store interface {
 	// actions
-    // initialized object
+    // Initialized object
     Init(connection string) error
+
+    // Write stream to file 
+    Set(name string, tag interface{}) (tagOut initerface{}, err error)
+
+    // Returns stream to file
+    Get(name, string) (found bool, tag interface{}, err error)
+
+    // Delete file 
+    Delete(name string, tag interface{}) (err error)
 }
