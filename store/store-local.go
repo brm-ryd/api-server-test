@@ -94,6 +94,11 @@ func (f *Local) Get(name string, out io.Writer) (found bool, tag interface{}, er
 }
 
 func (f *Local) Set(name string, in io.Reader, tag interface{}) (tagOut interface{}, err error) {
+	if name == "" {
+		err = errors.New("empty name")
+		return
+	}
+
 	// Create folders if necessary
 	dir := path.Dir(name)
 	if dir != "" {
@@ -120,6 +125,11 @@ func (f *Local) Set(name string, in io.Reader, tag interface{}) (tagOut interfac
 }
 
 func (f *Local) Delete(name string, tag interface{}) (err error) {
+	if name == "" {
+		err = errors.New("empty")
+		return
+	}
+
 	// Delete the file
 	err = os.Remove(f.basePath + name)
 	return
