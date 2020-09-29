@@ -24,6 +24,11 @@ type AzureStorage struct {
 
 // Actions (like in store modules interfaces)
 func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut interface{}, err error) {
+	if name == "" {
+		err = errors.New("empty name")
+		return
+	}
+
 	// Create blob URL
 	u, err := url.Parse(f.storageURL + "/" + name)
 	if err != nil {
@@ -63,5 +68,24 @@ func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interfac
 		MaxRetryRequests: 3,
 	})
 	defer body.Close()
+
+	// Empty file exist
+	if resp.ContentLength() == 0 {
+		body.Close()
+		found = true
+		return
+	}
+
+	// Copy response
+	err = io.Copy(body)
+	if err != nil {
+		return
+	}
+
+	// Get ETag
+	tagObj := resp.ETag()
+	tag = &tagObj
+
+	return
 
 }
