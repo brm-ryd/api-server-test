@@ -77,7 +77,7 @@ func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interfac
 	}
 
 	// Copy response
-	err = io.Copy(body)
+	_, err = io.Copy(out, body)
 	if err != nil {
 		return
 	}
