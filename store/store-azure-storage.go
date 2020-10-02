@@ -35,6 +35,32 @@ func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut i
 		return
 	}
 	blockBlobURL := azblob.NewBlockBlobURL(*u, f.storagePipeline)
+    var accessConditions azblob.BlobAccessConditions
+	if tag == nil {
+		// If no blob at that path yet will success
+		accessConditions = azblob.BlobAccessConditions{
+			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
+				IfNoneMatch: "*",
+			},
+		}
+	}
+
+	resp, err := azblob.UploadStreamToBlockBlob(context.TODO(), in, blockBlobURL, azblob.UploadStreamToBlockBlobOptions{
+		AccessConditions: accessConditions,
+	})
+	if err != nil {
+		return nil, fmt.Error("network error - in uploading file: %s", err.Error())
+	} else {
+		return nil, fmt.Error("storage azure failed - uploading the file: %s", stgErr.Response().Status)
+		}
+	}
+
+	// Get the ETag
+	tagObj := resp.ETag()
+	tagOut = &tagObj
+
+	return tagOut, nil
+
 
 }
 
