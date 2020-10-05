@@ -23,6 +23,9 @@ type AzureStorage struct {
 }
 
 // Actions (like in store modules interfaces)
+// func (f *AzureStorage) Init(connection string) error 
+	
+
 func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut interface{}, err error) {
 	if name == "" {
 		err = errors.New("empty name")
@@ -43,9 +46,19 @@ func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut i
 				IfNoneMatch: "*",
 			},
 		}
+	} else {
+		// Uploads success only if file hasn't been modified since last download
+		accessConditions = azblob.BlobAccessConditions{
+			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
+				IfMatch: *tag.(*azblob.ETag),
+			},
+		}
 	}
 
+
 	resp, err := azblob.UploadStreamToBlockBlob(context.TODO(), in, blockBlobURL, azblob.UploadStreamToBlockBlobOptions{
+		BufferSize: 3 * 1024 * 1024,
+        MaxBuffers: 2,
 		AccessConditions: accessConditions,
 	})
 	if err != nil {
@@ -65,6 +78,11 @@ func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut i
 }
 
 func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interface{}, err error) {
+	if name == "" {
+		err = errors.New ("Empty name")
+		return
+	}
+
 	found = true
 
 	// Create blob URL
@@ -115,3 +133,7 @@ func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interfac
 	return
 
 }
+
+// func (f *AzureStorage) Delete(name string, tag interface{}) (err error) 
+
+
