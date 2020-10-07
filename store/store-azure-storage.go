@@ -23,7 +23,39 @@ type AzureStorage struct {
 }
 
 // Actions (like in store modules interfaces)
-// func (f *AzureStorage) Init(connection string) error 
+func (f *AzureStorage) Init(connection string) error {
+    r := regexp.MustCompile("^(azureblob|azure):([a-z0-9][a-z0-9-]{2,62})$")
+	match := r.FindStringSubmatch(connection)
+	if match == nil || len(match) != 3 {
+		return errors.New("invalid connection string for blob storage")
+	}
+	f.storageContainer = match[2]
+
+	// Get storage account name and key from the environment
+	name := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	key := os.Getenv("AZURE_STORAGE_ACCESS_KEY")
+	if name == "" || key == "" {
+		return errors.New("environmental variables AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY are not defined")
+	}
+	f.storageAccountName = name
+
+	// Endpoint storage
+	f.storageURL = fmt.Sprintf("https://%s.blob.core.windows.net/%s", f.storageAccountName, f.storageContainer)
+
+	// Azure Storage auth
+	credential, err := azblob.NewSharedKeyCredential(f.storageAccountName, key)
+	if err != nil {
+		return err
+	}
+	f.storagePipeline = azblob.NewPipeline(credential, azblob.PipelineOptions{
+		Retry: azblob.RetryOptions{
+			MaxTries: 5,
+		},
+	})
+
+	return nil
+
+}
 	
 
 func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut interface{}, err error) {
@@ -134,6 +166,32 @@ func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interfac
 
 }
 
-// func (f *AzureStorage) Delete(name string, tag interface{}) (err error) 
+func (f *AzureStorage) Delete(name string, tag interface{}) (err error) {
+    if name == "" {
+		err = errors.New("empty name")
+		return
+	}
+
+	// Create blob URL
+	u, err := url.Parse(f.storageURL + "/" + name)
+	if err != nil {
+		return
+	}
+	blockBlobURL := azblob.NewBlockBlobURL(*u, f.storagePipeline)
+
+	var accessConditions azblob.BlobAccessConditions
+	if tag != nil {
+		accessConditions = azblob.BlobAccessConditions{
+			ModifiedAccessConditions: azblob.ModifiedAccessConditions{
+				IfMatch: *tag.(*azblob.ETag),
+			},
+		}
+	}
+
+	// Delete blob
+	err = blockBlobURL.Delete(context.TODO(azblob), azblob.DeleteSnapshots, accessConditions)
+	return
+
+}
 
 
