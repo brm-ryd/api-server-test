@@ -24,7 +24,7 @@ type AzureStorage struct {
 
 // Actions (like in store modules interfaces)
 func (f *AzureStorage) Init(connection string) error {
-    r := regexp.MustCompile("^(azureblob|azure):([a-z0-9][a-z0-9-]{2,62})$")
+	r := regexp.MustCompile("^(azureblob|azure):([a-z0-9][a-z0-9-]{2,62})$")
 	match := r.FindStringSubmatch(connection)
 	if match == nil || len(match) != 3 {
 		return errors.New("invalid connection string for blob storage")
@@ -56,7 +56,6 @@ func (f *AzureStorage) Init(connection string) error {
 	return nil
 
 }
-	
 
 func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut interface{}, err error) {
 	if name == "" {
@@ -70,7 +69,7 @@ func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut i
 		return
 	}
 	blockBlobURL := azblob.NewBlockBlobURL(*u, f.storagePipeline)
-    var accessConditions azblob.BlobAccessConditions
+	var accessConditions azblob.BlobAccessConditions
 	if tag == nil {
 		// If no blob at that path yet will success
 		accessConditions = azblob.BlobAccessConditions{
@@ -87,16 +86,17 @@ func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut i
 		}
 	}
 
-
 	resp, err := azblob.UploadStreamToBlockBlob(context.TODO(), in, blockBlobURL, azblob.UploadStreamToBlockBlobOptions{
-		BufferSize: 3 * 1024 * 1024,
-        MaxBuffers: 2,
+		BufferSize:       3 * 1024 * 1024,
+		MaxBuffers:       2,
 		AccessConditions: accessConditions,
 	})
 	if err != nil {
-		return nil, fmt.Error("network error - in uploading file: %s", err.Error())
-	} else {
-		return nil, fmt.Error("storage azure failed - uploading the file: %s", stgErr.Response().Status)
+		if stgErr, ok := err.(azblob.StorageError); !ok {
+			return nil, fmt.Error("network error - in uploading file: %s", err.Error())
+
+		} else {
+			return nil, fmt.Error("storage azure failed - uploading the file: %s", stgErr.Response().Status)
 		}
 	}
 
@@ -106,12 +106,11 @@ func (f *AzureStorage) Set(name string, in io.Reader, tag interface{}) (tagOut i
 
 	return tagOut, nil
 
-
 }
 
 func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interface{}, err error) {
 	if name == "" {
-		err = errors.New ("Empty name")
+		err = errors.New("Empty name")
 		return
 	}
 
@@ -141,7 +140,7 @@ func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interfac
 		return
 	}
 	body := resp.Body(azblob.RetryReaderOptions{
-		MaxRetryRequests: 3,
+		MaxRetryRequests: 5,
 	})
 	defer body.Close()
 
@@ -167,7 +166,7 @@ func (f *AzureStorage) Get(name string, out io.Writer) (found bool, tag interfac
 }
 
 func (f *AzureStorage) Delete(name string, tag interface{}) (err error) {
-    if name == "" {
+	if name == "" {
 		err = errors.New("empty name")
 		return
 	}
@@ -189,9 +188,7 @@ func (f *AzureStorage) Delete(name string, tag interface{}) (err error) {
 	}
 
 	// Delete blob
-	err = blockBlobURL.Delete(context.TODO(azblob), azblob.DeleteSnapshots, accessConditions)
+	_, err = blockBlobURL.Delete(context.TODO(), azblob.DeleteSnapshotsOptionInclude, accessConditions)
 	return
 
 }
-
-
